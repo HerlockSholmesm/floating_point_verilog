@@ -9,7 +9,7 @@ module div_sp(
   reg [7:0] a_exp, b_exp, z_exp;
   reg [22:0] A,M,Q;
   reg [3:0] count;
-  reg [1:0] state;
+  reg [1:0] state = 0;
   reg [31:0] z;
   parameter S_START = 2'b00,
             S_DIVIDE = 2'b01,
@@ -60,6 +60,7 @@ module div_sp(
             z_mantis <= 1;
             state <= S_FINISH;
           end
+          state<= S_DIVIDE;
         end
 
         S_DIVIDE:
@@ -70,43 +71,45 @@ module div_sp(
             Q = {Q[21:0],1'b0};
             A = A+M;
           end
-          else
+        else
           begin
             A = {A[21:0],Q[22]};
             Q = {Q[21:0],1'b0};
             A = A-M;
           end
-          if (A[22])
+        if (A[22])
           begin
             Q[0]=0;
           end
-          else
+        else
           begin
             Q[0] =1;
           end
-          if (A[22])
+        if (A[22])
           begin
             A = {A[21:0],Q[22]};
             Q = {Q[21:0],1'b0};
             A = A+M;
           end
-          else
+        else
           begin
             A = {A[21:0],Q[22]};
             Q = {Q[21:0],1'b0};
             A = A-M;
           end
-          if (A[22])
+        if (A[22])
           begin
             Q[0]=0;
           end
-          else
+        else
           begin
             Q[0] =1;
           end
           count = count+1;
           if (count == 12)
             state = S_FINISH;
+          else
+            state = S_DIVIDE;
         end
 
         S_FINISH:
@@ -118,6 +121,7 @@ module div_sp(
           end
           //underflow,overflow
           z_mantis = Q;
+          z_exp = a_exp - b_exp;
           z_exp = z_exp + 127;
           z_sign = a_sign ^ b_sign;
           z = {z_sign,z_exp,z_mantis};
@@ -136,5 +140,5 @@ module div_sp(
 
   end
 
-assign o_z =z;
+assign o_z = z;
 endmodule

@@ -19,7 +19,6 @@ class IEEE:
         self.mantis = '1' + number[MANTIS_INDEX:]
         # self.mantis = int(mantis, 2)
         self.exponent = int(number[1: MANTIS_INDEX], 2) - BIAS
-        # self.exponent = number[1: MANTIS_INDEX]
 
     def __str__(self):
         return 'm: {}, exp: {}, sign: {}'.format(self.mantis, self.exponent, self.sign)
@@ -65,17 +64,32 @@ class Div:  # a / b
         count = 26
         Q = self.a.mantis
         M = self.b.mantis
-        A = ['0' * len(self.a.mantis)]
+        A = '0' * len(self.a.mantis)
         MSB = 51
         for _ in range(count):
             if A[0] == '1':
-                A = A[1:] + Q[0]
+                A = A[1:] + Q[0:1]
                 Q = Q[1:] + '0'
-                A = A + M  # TODO: binary addition
+                A = adder(A, M)
             else:
-                A = A[1:] + Q[0]
+                A = A[1:] + Q[0:1]
                 Q = Q[1:] + '0'
-                A = A - M  # TODO: BINARY SUB
+                A = sub(A, M)
+
+            Q = Q[0: len(Q) - 1] + '0' if A[0] == '1' else '1'
+
+            if A[0] == '1':
+                A = A[1:] + Q[0:1]
+                Q = Q[1:] + '0'
+                A = adder(A, M)
+            else:
+                A = A[1:] + Q[0:1]
+                Q = Q[1:] + '0'
+                A = sub(A, M)
+
+            Q = Q[0: len(Q) - 1] + '0' if A[0] == '1' else '1'
+
+        self.mantis = Q
 
     def normalize(self):
         pass
@@ -86,6 +100,35 @@ class Div:  # a / b
         result = result.replace('0b', '')
         # return binaryToFloat(result)
         return result
+
+
+def adder(x, y):
+    max_len = max(len(x), len(y))
+
+    x = x.zfill(max_len)
+    y = y.zfill(max_len)
+
+    result = ''
+    carry = 0
+
+    for i in range(max_len-1, -1, -1):
+        r = carry
+        r += 1 if x[i] == '1' else 0
+        r += 1 if y[i] == '1' else 0
+        result = ('1' if r % 2 == 1 else '0') + result
+        carry = 0 if r < 2 else 1
+
+    if carry != 0:
+        result = '1' + result
+
+    return result.zfill(max_len)
+
+
+def sub(a, b):
+    not_b = ['0' if x == '1' else '1' for x in b]
+    not_b = ''.join(not_b)
+    _b = adder(not_b, '1')
+    return adder(a, _b)[1:]
 
 
 def getBin(x, is_positive=True):
@@ -115,26 +158,6 @@ def floatToBinary32(value):
 def binaryToFloat(value):
     hx = hex(int(value, 2))
     return struct.unpack("d", struct.pack("q", int(hx, 16)))[0]
-
-
-# def float_bin(number, places=3):    # 1.75 -> 1.11
-#     whole, dec = str(number).split(".")
-#     whole = int(whole)
-#     dec = int(dec)
-
-#     res = bin(whole).lstrip("0b") + "."
-#     for _ in range(places):
-#         whole, dec = str((decimal_converter(dec)) * 2).split(".")
-#         dec = int(dec)
-#         res += whole
-
-#     return res
-
-
-# def decimal_converter(num):
-#     while num > 1:
-#         num /= 10
-#     return num
 
 
 def generate_test():
@@ -169,7 +192,10 @@ def generate_test():
 # print(int('11000000000000000000000000000000000000000000000000000', 2))
 # a = IEEE(3.5)
 # b = IEEE(1.5)
-# div = Div(a, b)
+# div = Div(3.5, 1.5)
 # result = div.divison()
 # print(result)
-generate_test()
+
+print(bin(9))
+
+# generate_test()

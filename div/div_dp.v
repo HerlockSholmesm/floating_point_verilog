@@ -10,7 +10,7 @@ module div_dp
     reg [106:0] A, M;
     reg [105:0] Q;
     reg [4:0] count;
-    reg [1:0] state = 1;
+    reg [1:0] state;
     parameter S_IDLE=2'b00,
               S_START=2'b01,
               S_DIVIDE=2'b10,
@@ -189,17 +189,29 @@ module div_dp
                                         Q = Q << 1;
                                         a_exp = a_exp-1;
                                     end
+                                z_mantis = Q[52:1];
+                                z_exp = 1023+a_exp-b_exp;
+                                z_sign = a_sign ^ b_sign;
+                                state = S_IDLE;
                                 //underflow,overflow
-                                z_mantis <= Q[52:1];
-                                z_exp <= 1023+a_exp-b_exp;
-                                z_sign <= a_sign ^ b_sign;
-                                state <= S_IDLE;
+                                if (z_exp > 2026)
+                                    begin
+                                        z_sign = a_sign ^ b_sign;
+                                        z_exp = 1024;
+                                        z_mantis = 0;
+                                    end
+                                if (z_exp < 1)
+                                    begin
+                                        z_sign = a_sign ^ b_sign;
+                                        z_sign = 0;
+                                        z_mantis = 0;
+                                    end
                             end
 
                         S_IDLE:
                             begin
-                                //if (start == 1)
-                                //  state = S_START;
+                                if (start)
+                                  state <= S_START;
                             end
                     endcase
                 end

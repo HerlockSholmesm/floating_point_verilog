@@ -194,7 +194,7 @@ module div_dp
                                 z_sign = a_sign ^ b_sign;
                                 state = S_IDLE;
                                 //underflow,overflow
-                                if (z_exp > 2026)
+                                if (z_exp > 2046)
                                     begin
                                         z_sign = a_sign ^ b_sign;
                                         z_exp = 1024;
@@ -203,7 +203,7 @@ module div_dp
                                 if (z_exp < 1)
                                     begin
                                         z_sign = a_sign ^ b_sign;
-                                        z_sign = 0;
+                                        z_exp = 0;
                                         z_mantis = 0;
                                     end
                             end

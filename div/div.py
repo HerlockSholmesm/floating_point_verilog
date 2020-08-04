@@ -4,11 +4,13 @@ import random
 # SIGN_INDEX = 31
 # MANTIS_INDEX = 22
 # BIAS = 127
+# MAX_EXPONENT = 128
+# MIN_EXPONENT = -127
 SIGN_INDEX = 0
 MANTIS_INDEX = 12
 BIAS = 1023
-MAX_EXPONENT = 10000
-MIN_EXPONENT = -10000
+MAX_EXPONENT = 1024
+MIN_EXPONENT = -1023
 
 
 class IEEE:
@@ -40,8 +42,15 @@ class Div:  # a / b
         self.sign_bit = None
         self.mantis = None
         self.exponent = None
+        self.Q = None
+        self.is_finished = False
 
     def divison(self):
+        self.is_valid()
+
+        if self.is_finished == True:
+            return self.get_result
+
         self.sign_bit = self.a.sign ^ self.b.sign
         self.exponent = self.a.exponent - self.b.exponent + BIAS
         self.calc_mantis()
@@ -50,49 +59,90 @@ class Div:  # a / b
         self.check_underflow()
         return self.get_result()
 
+    def is_valid(self):
+        len_mantis = len(self.a.mantis)
+        zero_pattern = '0' * len_mantis         # 00000000000000
+        one_pattern = '1' * len_mantis          # 11111111111111
+
+        # a=NaN or b=NaN -> z=NaN
+        if (self.a.exponent == MAX_EXPONENT and self.a.mantis != zero_pattern) or (self.b.exponent == MAX_EXPONENT and self.b.mantis != zero_pattern):
+            self.sign_bit = 0
+            self.exponent = MAX_EXPONENT
+            self.mantis = one_pattern
+            self.is_finished = True
+
+        # a=inf or b=inf -> z=inf
+        elif (self.a.exponent == MAX_EXPONENT and self.a.mantis == zero_pattern and not(self.b.exponent == MIN_EXPONENT and self.b.mantis == zero_pattern)) or (self.b.exponent == MAX_EXPONENT and self.b.mantis == zero_pattern and not(self.b.exponent == MIN_EXPONENT and self.b.mantis == zero_pattern)):
+            self.sign_bit = self.a.sign ^ self.b.sign
+            self.exponent = MAX_EXPONENT
+            self.mantis = one_pattern
+            self.is_finished = True
+
+        # a=0,b=inf or a=inf,b=0 -> z=NaN
+        elif ((self.a.exponent == MAX_EXPONENT and self.a.mantis == zero_pattern and self.b.exponent == MIN_EXPONENT and self.b.mantis == zero_pattern) or (self.b.exponent == MAX_EXPONENT and self.b.mantis == zero_pattern and self.b.exponent == MIN_EXPONENT and self.b.mantis == zero_pattern)):
+            self.sign_bit = 0
+            self.exponent = MAX_EXPONENT
+            self.mantis = one_pattern
+            self.is_finished = True
+
     def check_overflow(self):
-        if self.exponent > MAX_EXPONENT:
-            print('overflow')
-            exit(4)
+        MAX = 2046 if len(self.a.mantis) == 53 else 254
+        if self.exponent > MAX:
+            self.is_finished = True
+            self.sign_bit = self.a.sign ^ self.b.sign
+            self.exponent = 1024
+            self.mantis = '0' * len(self.a.mantis)
 
     def check_underflow(self):
-        if self.exponent < MIN_EXPONENT:
-            print('underflow')
-            exit(4)
+        if self.exponent < 1:
+            self.is_finished = True
+            self.sign_bit = self.a.sign ^ self.b.sign
+            self.exponent = 0
+            self.mantis = '0' * len(self.a.mantis)
 
     def calc_mantis(self):
-        count = 26
-        Q = self.a.mantis
-        M = self.b.mantis
-        A = '0' * len(self.a.mantis)
-        MSB = 51
-        for _ in range(count):
-            if A[0] == '1':
-                A = A[1:] + Q[0:1]
-                Q = Q[1:] + '0'
-                A = adder(A, M)
-            else:
-                A = A[1:] + Q[0:1]
-                Q = Q[1:] + '0'
-                A = sub(A, M)
+        len_mantis = len(self.a.mantis)
+        count = round((len_mantis - 1) / 2)
+        Q = '1' + self.a.mantis + '0' * (len_mantis - 1)
+        M = '1' + self.b.mantis + '0' * (len_mantis)
+        A = '0' * (len_mantis * 2 + 1)
+        for i in range(count):
+            for _ in range(4):
+                if A[0] == '1':
+                    A = A[1:] + Q[0:1]  # {A,Q} = {A,Q} << 1;
+                    Q = Q[1:] + '0'
+                    A = adder(A, M)
+                else:
+                    A = A[1:] + Q[0:1]
+                    Q = Q[1:] + '0'
+                    A = sub(A, M)
 
-            Q = Q[0: len(Q) - 1] + '0' if A[0] == '1' else '1'
+                c = '0' if A[0] == '1' else '1'
+                Q = Q[0: len(Q) - 1] + c
+            if i == 25:
+                for _ in range(2):
+                    if A[0] == '1':
+                        A = A[1:] + Q[0:1]  # {A,Q} = {A,Q} << 1;
+                        Q = Q[1:] + '0'
+                        A = adder(A, M)
+                    else:
+                        A = A[1:] + Q[0:1]
+                        Q = Q[1:] + '0'
+                        A = sub(A, M)
 
-            if A[0] == '1':
-                A = A[1:] + Q[0:1]
-                Q = Q[1:] + '0'
-                A = adder(A, M)
-            else:
-                A = A[1:] + Q[0:1]
-                Q = Q[1:] + '0'
-                A = sub(A, M)
+                    c = '0' if A[0] == '1' else '1'
+                    Q = Q[0: len(Q) - 1] + c
 
-            Q = Q[0: len(Q) - 1] + '0' if A[0] == '1' else '1'
-
-        self.mantis = Q
+        self.Q = Q
 
     def normalize(self):
-        pass
+        Q = self.Q[::-1]
+        index = len(self.a.mantis)
+        if Q[index] == '0':
+            # shift left
+            Q = '0' + Q[0: len(Q) - 1]
+            self.exponent -= 1
+        self.mantis = Q[1: index]
 
     def get_result(self):
         print(self.mantis)
@@ -121,7 +171,10 @@ def adder(x, y):
     if carry != 0:
         result = '1' + result
 
-    return result.zfill(max_len)
+    if len(result) > max_len:
+        result = result[1:]
+
+    return result
 
 
 def sub(a, b):
@@ -188,14 +241,16 @@ def generate_test():
     out10.close()
 
 
-# print(int('11100000000000000000000000000000000000000000000000000', 2))
-# print(int('11000000000000000000000000000000000000000000000000000', 2))
-# a = IEEE(3.5)
-# b = IEEE(1.5)
-# div = Div(3.5, 1.5)
+# div = Div(3.3, 1.5)
 # result = div.divison()
 # print(result)
 
-print(bin(9))
+print(binaryToFloat('0100000000001010101010101010101010101010101010101010101010101010'))
+
+# print(sub('100', '011'))
+
+# print(bin(9))
 
 # generate_test()
+# 0100000000001010101010101010101010101010101010101010101010101010
+# 0100000000000001100110011001100110011001100110011001100110011001

@@ -12,8 +12,7 @@ module tb_dp;
     b <= 64'b011111111111000000000000000000000000000000000000000000000000000;
     reset <= 0;
     strt <= 1;
-    #10 strt <= 1;
-    #30 strt <= ~strt;
+    strt <= #40 0;
     forever
     begin
       #5 clk = ~clk;

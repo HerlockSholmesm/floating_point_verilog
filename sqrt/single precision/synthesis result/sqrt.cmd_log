@@ -1,0 +1,2 @@
+xst -intstyle ise -ifn "C:/.Xilinx/DIV/sqrt.xst" -ofn "C:/.Xilinx/DIV/sqrt.syr" 
+netgen -intstyle ise -insert_glbl true -w -dir netgen/synthesis -ofmt verilog -sim sqrt.ngc sqrt_synthesis.v 

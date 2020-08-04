@@ -10,7 +10,7 @@ module div_dp
     reg [106:0] A, M;
     reg [105:0] Q;
     reg [4:0] count;
-    reg [1:0] state;
+    reg [1:0] state =0;
     parameter S_IDLE=2'b00,
               S_START=2'b01,
               S_DIVIDE=2'b10,

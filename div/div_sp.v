@@ -148,8 +148,8 @@ module div_sp(
         begin
           if(~Q[25])
           begin
-            Q <= Q << 1;
-            z_exp <= z_exp-1;
+            Q = Q << 1;
+            a_exp = a_exp-1;
           end
           //underflow,overflow
           z_mantis <= Q[24:1];

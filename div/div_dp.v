@@ -184,10 +184,10 @@ module div_dp
 
                         S_FINISH:
                             begin
-                                if (~Q[54])
+                                if (~Q[53])
                                     begin
-                                        Q <= Q << 1;
-                                        z_exp <= z_exp-1;
+                                        Q = Q << 1;
+                                        a_exp = a_exp-1;
                                     end
                                 //underflow,overflow
                                 z_mantis <= Q[52:1];

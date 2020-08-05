@@ -5,7 +5,7 @@ module sp_sqrt_tb;
 reg [31:0]in;
 wire [31:0]out;
 
-dp_sqrt s(.x(in), .y(out));
+sp_sqrt s(.x(in), .y(out));
 
 
 integer out_file;

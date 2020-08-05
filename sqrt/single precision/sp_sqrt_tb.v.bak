@@ -22,5 +22,7 @@ initial begin
 		in = $random;
 		#10;
 	end
+	$fclose(out_file);
+	$stop;
 end
 endmodule
